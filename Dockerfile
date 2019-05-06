@@ -24,10 +24,10 @@ ARG SOURCE_COMMIT
 
 # Install the specified version of AllenNLP.
 RUN if [ ! -z "$VERSION" ]; \
-    then echo "Installing allennlp==$VERSION."; pip install allennlp==$VERSION; \
+    then echo "Installing allennlp==$VERSION."; pip install -q allennlp==$VERSION; \
     elif [ ! -z "$SOURCE_COMMIT" ]; \
-    then echo "Installing allennlp@$SOURCE_COMMIT"; pip install "git+git://github.com/allenai/allennlp.git@$SOURCE_COMMIT"; \
-    else echo "Installing the latest pip release of allennlp"; pip install allennlp; \
+    then echo "Installing allennlp@$SOURCE_COMMIT"; pip install -q "git+git://github.com/allenai/allennlp.git@$SOURCE_COMMIT"; \
+    else echo "Installing the latest pip release of allennlp"; pip install -q allennlp; \
     fi
 
 LABEL maintainer="allennlp-contact@allenai.org"
