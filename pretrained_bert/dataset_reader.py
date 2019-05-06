@@ -16,16 +16,16 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@DatasetReader.register("bert_qa")
+@DatasetReader.register("squad_for_pretrained_bert")
 class BertQADatasetReader(DatasetReader):
     def __init__(self,
                  lazy: bool = False,
-                 pretrained_bert_model: str = 'bert-base-uncased',
+                 pretrained_bert_model_file: str = 'bert-base-uncased',
                  max_query_length: int = 64,
                  max_sequence_length: int = 384,
                  document_stride: int = 128) -> None:
         super().__init__(lazy)
-        self._tokenizer = BertTokenizer.from_pretrained(pretrained_bert_model)
+        self._tokenizer = BertTokenizer.from_pretrained(pretrained_bert_model_file)
         self._max_query_length = max_query_length
         self._max_sequence_length = max_sequence_length
         self._document_stride = document_stride

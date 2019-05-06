@@ -54,13 +54,14 @@ class BertForQuestionAnswering(Model):
     vocab : ``Vocabulary``
     bert_model_type : ``str``
         String identifying the type of BERT model to use: "bert-base-uncased", "bert-large-cased", etc.
+    model_is_for_squad1 : ``bool``, optional (default is True)
     null_score_difference_threshold : ``float``, optional (default is 0.0)
+        Applicable only is ``model_is_for_squad1`` is False.
         This value is used for predicting null answers if that is an option in the dataset. If the difference
         between the null score, and the best non-null score is greater than this value, null answer will be
         predicted. That is, if this value is set to 0.0, null answer will be treated as any other answer. However,
         many systems tune this value as a hyperparameter on the dev set after training is done, since this value
         affects only the ``decode`` step.
-    model_is_for_squad1 : ``bool``, optional (default is True)
     n_best_size : ``int``, optional (default is 20)
     max_answer_length : ``int``, optional (default is 30)
     pretrained_archive_path : ``str``, optional
@@ -70,7 +71,6 @@ class BertForQuestionAnswering(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  bert_model_type: str,
-                 null_score_difference_threshold: float = 0.0,
                  model_is_for_squad1: bool = True,
                  null_score_difference_threshold: float = 0.0,
                  n_best_size: int = 20,

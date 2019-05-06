@@ -1,7 +1,7 @@
 {
   "dataset_reader": {
-    "type": "bert_qa",
-    "pretrained_bert_model": "bert-base-uncased"
+    "type": "squad_for_pretrained_bert",
+    "pretrained_bert_model_file": "bert-base-uncased"
   },
   "train_data_path": "https://s3-us-west-2.amazonaws.com/pradeepd-bert-qa-models/sample_data/sample-v2.0.json",
   "validation_data_path": "https://s3-us-west-2.amazonaws.com/pradeepd-bert-qa-models/sample_data/sample-v2.0.json",
