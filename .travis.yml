@@ -1,0 +1,12 @@
+language: python
+python:
+  - "3.6.1"
+install:
+  - pip install -q -r requirements.txt
+  - pip install codecov
+cache: pip
+script:
+  - pytest --cov=pretrained_bert
+  - pylint pretrained_bert tests
+after_success:
+  - codecov
