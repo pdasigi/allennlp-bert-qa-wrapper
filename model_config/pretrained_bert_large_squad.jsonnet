@@ -1,8 +1,8 @@
 {
   "dataset_reader": {
-    "type": "squad_for_pretrained_bert",
+    "type": "bert_qa",
     // "bert-base-uncased" or "bert-large-uncased"
-    "pretrained_bert_model_file": "bert-large-uncased"
+    "pretrained_bert_model": "bert-large-uncased"
   },
   // Some small data files in the right format just to have AllenNLP produce a model archive after "training".
   // Training will not change the weights.

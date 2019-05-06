@@ -73,8 +73,6 @@ class BertForQuestionAnswering(Model):
                             type_vocab_size=config_to_use["type_vocab_size"],
                             initializer_range=config_to_use["initializer_range"])
         self.bert_qa_model = HuggingFaceBertQA(config)
-        self._loaded_qa_weights = False
-        self._pretrained_archive_path = pretrained_archive_path
         self._null_score_difference_threshold = null_score_difference_threshold
         self._model_is_for_squad1 = model_is_for_squad1
         self._n_best_size = n_best_size
@@ -82,29 +80,34 @@ class BertForQuestionAnswering(Model):
 
     @overrides
     def forward(self,  # type: ignore
-                input_ids: torch.Tensor,
-                token_type_ids: torch.Tensor,
-                attention_mask: torch.Tensor,
+                input_ids: List[torch.Tensor],
+                token_type_ids: List[torch.Tensor],
+                attention_mask: List[torch.Tensor],
                 tokens: List[str],
                 document_tokens: List[str],
                 token_to_original_map: Dict[int, int],
-                token_is_max_context: Dict[int, bool]) -> Dict[str, torch.Tensor]:
+                answer_start_position: List[torch.Tensor] = None,
+                answer_end_position: List[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
-        if not self._loaded_qa_weights and self.training:
-            self.bert_qa_model = HuggingFaceBertQA.from_pretrained(self._pretrained_archive_path)
-            self._loaded_qa_weights = True
-        start_logits, end_logits = self.bert_qa_model(torch.stack(input_ids),
-                                                      torch.stack(token_type_ids),
-                                                      torch.stack(attention_mask))
-        output_dict = {"start_logits": start_logits,
-                       "end_logits": end_logits,
-                       "tokens": tokens,
-                       "document_tokens": document_tokens,
-                       "token_to_original_map": token_to_original_map,
-                       "token_is_max_context": token_is_max_context}
-        if self.training:
-            loss = torch.sum(start_logits) * 0.0
-            output_dict["loss"] = loss
+        if answer_start_position is not None and answer_end_position is not None:
+            # We're training.
+            start_positions = torch.stack(answer_start_position)
+            end_positions = torch.stack(answer_end_position)
+            loss = self.bert_qa_model(torch.stack(input_ids),
+                                      torch.stack(token_type_ids),
+                                      torch.stack(attention_mask),
+                                      start_positions,
+                                      end_positions)
+            output_dict = {"loss": loss}
+        else:
+            start_logits, end_logits = self.bert_qa_model(torch.stack(input_ids),
+                                                          torch.stack(token_type_ids),
+                                                          torch.stack(attention_mask))
+            output_dict = {"start_logits": start_logits,
+                           "end_logits": end_logits,
+                           "tokens": tokens,
+                           "document_tokens": document_tokens,
+                           "token_to_original_map": token_to_original_map}
         return output_dict
 
     @overrides
@@ -114,19 +117,17 @@ class BertForQuestionAnswering(Model):
         batch_tokens = output_dict["tokens"]
         batch_document_tokens = output_dict["document_tokens"]
         batch_token_map = output_dict["token_to_original_map"]
-        batch_token_is_max_context = output_dict["token_is_max_context"]
         _PrelimPrediction = collections.namedtuple(  # pylint: disable=invalid-name
                 "PrelimPrediction",
                 ["start_index", "end_index", "start_logit", "end_logit"])
         predictions: List[str] = []
         nbest_info: JsonDict = []
-        for start_logits, end_logits, tokens, document_tokens, token_map, token_is_max_context in zip(
+        for start_logits, end_logits, tokens, document_tokens, token_map in zip(
                 batch_start_logits,
                 batch_end_logits,
                 batch_tokens,
                 batch_document_tokens,
-                batch_token_map,
-                batch_token_is_max_context):
+                batch_token_map):
             prelim_predictions = []
             score_null = 1000000  # large and positive
             null_start_logit = 0  # the start logit at the slice with min null score
@@ -151,8 +152,6 @@ class BertForQuestionAnswering(Model):
                     if start_index not in token_map:
                         continue
                     if end_index not in token_map:
-                        continue
-                    if not token_is_max_context.get(start_index, False):
                         continue
                     if end_index < start_index:
                         continue
