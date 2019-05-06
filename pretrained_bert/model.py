@@ -46,14 +46,36 @@ BERT_BASE_CONFIG = {"attention_probs_dropout_prob": 0.1,
 
 @Model.register('bert_for_qa')
 class BertForQuestionAnswering(Model):
+    """
+    AllenNLP wrapper around HuggingFace's ``BertForQuestionAnswering`` model in pytorch-pretrained-bert.
+    
+    Parameters
+    ----------
+    vocab : ``Vocabulary``
+    bert_model_type : ``str``
+        String identifying the type of BERT model to use: "bert-base-uncased", "bert-large-cased", etc.
+    null_score_difference_threshold : ``float``, optional (default is 0.0)
+        This value is used for predicting null answers if that is an option in the dataset. If the difference
+        between the null score, and the best non-null score is greater than this value, null answer will be
+        predicted. That is, if this value is set to 0.0, null answer will be treated as any other answer. However,
+        many systems tune this value as a hyperparameter on the dev set after training is done, since this value
+        affects only the ``decode`` step.
+    model_is_for_squad1 : ``bool``, optional (default is True)
+    n_best_size : ``int``, optional (default is 20)
+    max_answer_length : ``int``, optional (default is 30)
+    pretrained_archive_path : ``str``, optional
+        If you trained your model using the HuggingFace code, you can pass the serialized model here to avoid
+        retraining. The weights will simply be transfered to the model archive.
+    """
     def __init__(self,
                  vocab: Vocabulary,
                  bert_model_type: str,
-                 pretrained_archive_path: str,
                  null_score_difference_threshold: float = 0.0,
-                 model_is_for_squad1: bool = False,
+                 model_is_for_squad1: bool = True,
+                 null_score_difference_threshold: float = 0.0,
                  n_best_size: int = 20,
-                 max_answer_length: int = 30) -> None:
+                 max_answer_length: int = 30,
+                 pretrained_archive_path: str = None) -> None:
         super().__init__(vocab)
         if bert_model_type == "bert_base":
             config_to_use = BERT_BASE_CONFIG
@@ -77,6 +99,9 @@ class BertForQuestionAnswering(Model):
         self._model_is_for_squad1 = model_is_for_squad1
         self._n_best_size = n_best_size
         self._max_answer_length = max_answer_length
+        self._pretrained_archive_path = pretrained_archive_path
+        # If we are copying weights from the HuggingFace model, keep track whether it is done.
+        self._loaded_qa_weights = False
 
     @overrides
     def forward(self,  # type: ignore
@@ -89,7 +114,16 @@ class BertForQuestionAnswering(Model):
                 answer_start_position: List[torch.Tensor] = None,
                 answer_end_position: List[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
-        if answer_start_position is not None and answer_end_position is not None:
+        need_to_fake_training = False
+        output_dict = {}
+        if self._pretrained_archive_path is not None:
+            # The pretrained weights are given. We don't have to retrain. Let's just load the
+            # weights and fake training.
+            if not self._loaded_qa_weights:
+                self.bert_qa_model = HuggingFaceBertQA.from_pretrained(self._pretrained_archive_path)
+                self._loaded_qa_weights = True
+            need_to_fake_training = True
+        elif answer_start_position is not None and answer_end_position is not None:
             # We're training.
             start_positions = torch.stack(answer_start_position)
             end_positions = torch.stack(answer_end_position)
@@ -98,16 +132,18 @@ class BertForQuestionAnswering(Model):
                                       torch.stack(attention_mask),
                                       start_positions,
                                       end_positions)
-            output_dict = {"loss": loss}
-        else:
-            start_logits, end_logits = self.bert_qa_model(torch.stack(input_ids),
-                                                          torch.stack(token_type_ids),
-                                                          torch.stack(attention_mask))
-            output_dict = {"start_logits": start_logits,
-                           "end_logits": end_logits,
-                           "tokens": tokens,
-                           "document_tokens": document_tokens,
-                           "token_to_original_map": token_to_original_map}
+            output_dict["loss"] = loss
+        start_logits, end_logits = self.bert_qa_model(torch.stack(input_ids),
+                                                      torch.stack(token_type_ids),
+                                                      torch.stack(attention_mask))
+        output_dict["start_logits"] = start_logits
+        output_dict["end_logits"] = end_logits
+        output_dict["tokens"] = tokens
+        output_dict["document_tokens"] = document_tokens
+        output_dict["token_to_original_map"] = token_to_original_map
+        if need_to_fake_training:
+            loss = torch.sum(start_logits) ** 0.0
+            output_dict["loss"] = loss
         return output_dict
 
     @overrides

@@ -7,7 +7,7 @@ from allennlp.predictors.predictor import Predictor
 @Predictor.register('bert-for-qa')
 class BertQAPredictor(Predictor):
     """
-    Predictor for the :class:`~allennlp.models.reading_comprehension.BertForQuestionAnswering` model.
+    Predictor for the :class:`pretrained_bert.model.BertForQuestionAnswering` model.
     """
 
     def predict(self, question: str, passage: str) -> JsonDict:
