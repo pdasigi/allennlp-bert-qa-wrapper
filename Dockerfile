@@ -19,6 +19,12 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 WORKDIR /stage/allennlp
 
+COPY pretrained_bert/ pretrained_bert/
+COPY tests/ tests/
+COPY fixtures/ fixtures/
+COPY codecov.yml codecov.yml
+COPY .pylintrc .pylintrc
+
 ARG VERSION
 ARG SOURCE_COMMIT
 
@@ -30,9 +36,12 @@ RUN if [ ! -z "$VERSION" ]; \
     else echo "Installing the latest pip release of allennlp"; pip install -q allennlp; \
     fi
 
+RUN pip install codecov
+RUN pip install pylint
+
 LABEL maintainer="allennlp-contact@allenai.org"
 
 ENV ALLENNLP_VERSION=$VERSION
 ENV ALLENNLP_SOURCE_COMMIT=$SOURCE_COMMIT
 
-ENTRYPOINT ["allennlp"]
+CMD ["/bin/bash"]

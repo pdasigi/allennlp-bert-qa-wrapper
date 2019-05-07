@@ -4,7 +4,7 @@ services:
 before_install:
   - docker build -t allennlp/allennlp .
 script:
-  - pytest --cov=pretrained_bert
-  - pylint pretrained_bert tests
+  - docker run allennlp/allennlp /bin/bash -c "pytest --cov=pretrained_bert"
+  - docker run allennlp/allennlp /bin/bash -c "pylint pretrained_bert tests"
 after_success:
-  - codecov
+  - docker run allennlp/allennlp /bin/bash -c "codecov"

@@ -5,6 +5,7 @@ from allennlp.predictors import Predictor
 from pretrained_bert import *
 
 class BertQAPredictorTest(AllenNlpTestCase):
+    # pylint: disable=no-self-use
     def test_predict(self):
         model_url = "https://s3-us-west-2.amazonaws.com/pradeepd-bert-qa-models/bert-base/squad1.1/model.tar.gz"
         archive = load_archive(model_url)

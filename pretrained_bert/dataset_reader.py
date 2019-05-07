@@ -1,6 +1,5 @@
 import json
 import logging
-import collections
 from typing import List
 
 import torch
@@ -105,14 +104,14 @@ class BertQADatasetReader(DatasetReader):
             # guaranteed to be preserved.
             actual_text = " ".join(doc_tokens[answer_start_position : (answer_end_position + 1)])
             cleaned_answer_text = " ".join(
-                whitespace_tokenize(answer))
+                    whitespace_tokenize(answer))
             if actual_text.find(cleaned_answer_text) == -1:
                 logger.warning("Skipping instance."
                                f"Could not find answer: '{actual_text}' vs. '{cleaned_answer_text}'")
                 return None
         else:
             answer_start_position = -1
-            answer_end_position = -1 
+            answer_end_position = -1
 
         query_tokens = self._tokenizer.tokenize(question_text)
 
@@ -133,8 +132,8 @@ class BertQADatasetReader(DatasetReader):
         max_tokens_for_doc = self._max_sequence_length - len(query_tokens) - 3
 
         if len(all_doc_tokens) > max_tokens_for_doc:
-            logger.warn("Ignoring instance longer than maximum allowed length."
-                        f"Paragraph had {len(all_doc_tokens)} and maximum allowed length is {max_tokens_for_doc}")
+            logger.warning("Ignoring instance longer than maximum allowed length."
+                           f"Paragraph had {len(all_doc_tokens)} and max allowed length is {max_tokens_for_doc}")
             return None
 
 
@@ -172,9 +171,9 @@ class BertQADatasetReader(DatasetReader):
         assert len(input_ids) == self._max_sequence_length
         assert len(input_mask) == self._max_sequence_length
         assert len(segment_ids) == self._max_sequence_length
-        input_ids_tensor = torch.tensor(input_ids, dtype=torch.long)
-        input_mask_tensor = torch.tensor(input_mask, dtype=torch.long)
-        segment_ids_tensor = torch.tensor(segment_ids, dtype=torch.long)
+        input_ids_tensor = torch.tensor(input_ids, dtype=torch.long)  # pylint: disable=not-callable
+        input_mask_tensor = torch.tensor(input_mask, dtype=torch.long)  # pylint: disable=not-callable
+        segment_ids_tensor = torch.tensor(segment_ids, dtype=torch.long)  # pylint: disable=not-callable
 
         fields = {"input_ids": MetadataField(input_ids_tensor),
                   "token_type_ids": MetadataField(segment_ids_tensor),
@@ -184,8 +183,8 @@ class BertQADatasetReader(DatasetReader):
                   "token_to_original_map": MetadataField(token_to_orig_map)}
 
         if answer_start_position is not None and answer_end_position is not None:
-            answer_start_position_tensor = torch.tensor(answer_start_position, dtype=torch.long)
-            answer_end_position_tensor = torch.tensor(answer_end_position, dtype=torch.long)
+            answer_start_position_tensor = torch.tensor(answer_start_position, dtype=torch.long)  # pylint: disable=not-callable
+            answer_end_position_tensor = torch.tensor(answer_end_position, dtype=torch.long)  # pylint: disable=not-callable
             fields["answer_start_position"] = MetadataField(answer_start_position_tensor)
             fields["answer_end_position"] = MetadataField(answer_end_position_tensor)
 
